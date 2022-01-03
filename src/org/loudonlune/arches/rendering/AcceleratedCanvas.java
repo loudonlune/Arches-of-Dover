@@ -1,5 +1,8 @@
 package org.loudonlune.arches.rendering;
 
+import org.loudonlune.arches.ArchesOfDover;
+import org.loudonlune.arches.event.KeyPressEvent;
+import org.loudonlune.arches.event.KeyReleaseEvent;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWKeyCallbackI;
 import org.lwjgl.glfw.GLFWVulkan;
@@ -13,10 +16,29 @@ public class AcceleratedCanvas {
 		GLFW.glfwSetKeyCallback(windowHandle, new GLFWKeyCallbackI() {
 			
 			@Override
-			public void invoke(long window, int key, int scancode, int action, int mods) {
+			public void invoke(long window, int key, int scancode, int action, int mods) {				
+				switch (action) {
+				case GLFW.GLFW_PRESS:
+					ArchesOfDover.getInstance()
+					.getEventBus()
+					.queueEvent(new KeyPressEvent(key));
+					
+					break;
+					
+				case GLFW.GLFW_RELEASE:
+					ArchesOfDover.getInstance()
+					.getEventBus()
+					.queueEvent(new KeyReleaseEvent(key));
+					break;
+				}
 				
 			}
+			
 		});
+	}
+	
+	public boolean shouldClose() {
+		return GLFW.glfwWindowShouldClose(windowHandle);
 	}
 	
 	public AcceleratedCanvas(int width, int height, String name) {
@@ -26,6 +48,10 @@ public class AcceleratedCanvas {
 		renderer = null;
 	
 		registerCallbacks();
+	}
+	
+	public void makeVisible() {
+		GLFW.glfwShowWindow(windowHandle);
 	}
 	
 	private void destroyContext(GraphicsAPI api) {

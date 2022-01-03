@@ -4,6 +4,7 @@ import java.util.Properties;
 import java.util.logging.Logger;
 
 import org.loudonlune.arches.event.EventBus;
+import org.loudonlune.arches.event.GameCloseEvent;
 import org.loudonlune.arches.rendering.AcceleratedCanvas;
 import org.loudonlune.arches.rendering.GraphicsAPI;
 import org.loudonlune.arches.rendering.Renderer;
@@ -21,11 +22,15 @@ public final class ArchesOfDover implements Runnable {
 	private EventBus eventBus;
 	private AcceleratedCanvas canvas;
 	private Renderer currentRenderer;
+	private boolean exit;
+	
+	private final double updateRate = 20.0;
 	
 	public ArchesOfDover() {
 		eventBus = new EventBus();
 		canvas = new AcceleratedCanvas(1366, 768, "Arches of Dover");
 		currentRenderer = GraphicsAPI.GL_LATEST.createRendererForAPI();
+		exit = false;
 	}
 	
 	/**
@@ -72,8 +77,11 @@ public final class ArchesOfDover implements Runnable {
 		initializeLibraries();
 		
 		instance = new ArchesOfDover();
+		logger.info("Construction complete.");
 		instance.initialize();
+		logger.info("Initialization complete.");
 		instance.run();
+		logger.info("Shutting down.");
 	}
 
 	public EventBus getEventBus() {
@@ -92,8 +100,45 @@ public final class ArchesOfDover implements Runnable {
 		
 	}
 	
+	/*
+	 * Once engine is bootstrapped, this is called by the thread tasked with updating.
+	 */
 	public void run() {
+		double init = System.currentTimeMillis();
+		double now = System.currentTimeMillis();
+		double target = 1000.0 / updateRate;
 		
+		canvas.makeVisible();
+		
+		while (!exit) {
+			GLFW.glfwPollEvents();
+			exit = canvas.shouldClose();
+			if (exit) {
+				eventBus.queueEvent(new GameCloseEvent());
+			}
+			
+			double delta = now - init;
+			
+			eventBus.fireEvents();
+			
+			try {
+				long sleepTime = (long) (target - delta + 1);
+				if (sleepTime > 0)
+					Thread.sleep(sleepTime);
+				
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			
+			// TODO: once renderer must be initialized, remove not null check
+			if (currentRenderer != null) {
+				currentRenderer.render();
+			}
+			
+			canvas.swapBuffers();
+			now = System.currentTimeMillis();
+			init = now;
+		}
 	}
 	
 }

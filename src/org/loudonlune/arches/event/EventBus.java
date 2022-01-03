@@ -1,10 +1,10 @@
 package org.loudonlune.arches.event;
 
 import org.reflections.Reflections;
-import org.reflections.scanners.Scanners;
 import org.reflections.util.ConfigurationBuilder;
 import org.reflections.util.FilterBuilder;
 
+import java.lang.reflect.Modifier;
 import java.util.HashSet;
 import java.util.List;
 import java.util.PriorityQueue;
@@ -17,8 +17,8 @@ public final class EventBus {
 	private Set<Event> eventQueueSet;
 	private PriorityQueue<Event> eventQueue;
 	
-	private Set<Class<?>> handlers;
-	private Set<Class<?>> events;
+	private Set<EventHandlerWrapper> handlers;
+	private Set<Class<? extends Event>> events;
 	private Logger eventBusLogger;
 	
 	public Logger getLogger() {
@@ -54,26 +54,27 @@ public final class EventBus {
 	public int searchForEventClasses(ConfigurationBuilder searchPackage) {
 		Reflections reflectionUtils = new Reflections(searchPackage);
 		Set<Class<?>> listenerClasses = 
-				reflectionUtils.get(
-						Scanners.SubTypes.of(
-							Scanners.TypesAnnotated.with(EventHandler.class)
-						)
-				);
+				reflectionUtils.getTypesAnnotatedWith(EventHandler.class);
 		
-		Set<Class<?>> eventClasses = 
-				reflectionUtils.get(
-					Scanners.SubTypes.of(Event.class).asClass()
-				);
+		Set<Class<? extends Event>> eventClasses = reflectionUtils.getSubTypesOf(Event.class);
 		
-		handlers.addAll(listenerClasses);
-		events.addAll(eventClasses);
+		events.addAll(
+				eventClasses
+				.stream()
+				.filter(
+						c -> !Modifier.isAbstract(c.getModifiers())
+				).toList());
+		
+		for (Class<?> c : listenerClasses)
+			handlers.add(new EventHandlerWrapper(this, c));
+		
 		return listenerClasses.size() + eventClasses.size();
 	}
 	
 	/**
 	 * @return
 	 */
-	public Set<Class<?>> handlers() {
+	public Set<EventHandlerWrapper> handlers() {
 		return handlers;
 	}
 	
@@ -87,7 +88,7 @@ public final class EventBus {
 	public List<String> getKnownEventHandlers() {
 		return handlers
 		.stream()
-		.map(c -> c.getName())
+		.map(c -> c.getClass().getName())
 		.collect(Collectors.toList());
 	}
 	
@@ -108,8 +109,18 @@ public final class EventBus {
 					);
 		
 		eventBusLogger.info("Loaded " + searchForEventClasses(searchConfig) + " components.");
-		
-		
+	}
+	
+	public void fireEvents() {
+		while (!eventQueue.isEmpty()) {
+			Event e = eventQueue.remove();
+			
+			if (e.isCancelled())
+				continue;
+			
+			for (EventHandlerWrapper eh : handlers)
+				eh.handle(e.getClass(), e);
+		}
 	}
 	
 }

@@ -4,10 +4,16 @@ package org.loudonlune.arches.event;
  * Abstract class that can be fired by the EventBus.
  * @author Adam Hassick
  */
-public abstract class Event {
+public abstract class Event implements Comparable<Event> {
+	protected EventPriority priority = EventPriority.NORMAL;
 	private Long id = null;
 	private boolean fired = false;
 	protected boolean cancelled = false;
+	
+	@Override
+	public int compareTo(Event o) {
+		return priority.ordinal() - o.priority.ordinal();
+	}
 	
 	/**
 	 * Fires the event.
@@ -60,5 +66,9 @@ public abstract class Event {
 	 */
 	public void setCancelled(boolean c) {
 		cancelled = c;
+	}
+
+	public EventPriority getPriority() {
+		return priority;
 	}
 }

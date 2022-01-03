@@ -21,8 +21,8 @@ public class EventHandlerWrapper {
 		logger = parent.getLogger();
 		
 		for (Method m : wrappedClass.getMethods()) {
-			if (m.canAccess(this) && m.getParameterCount() == 1) {
-				Class<?> parameterClass = m.getParameters()[0].getClass();
+			if (m.getParameterCount() == 1) {
+				Class<?> parameterClass = m.getParameters()[0].getType();
 				
 				if (parent.hasEvent(parameterClass)) {
 					eventMethodMap.put(parameterClass, m);
@@ -33,7 +33,6 @@ public class EventHandlerWrapper {
 		Optional<Constructor<?>> defaultCtor = Arrays.asList(wrappedClass.getConstructors())
 				.stream()
 				.filter(ctor -> ctor.getParameterCount() == 0)
-				.filter(ctor -> ctor.canAccess(this))
 				.findFirst();
 		
 		if (defaultCtor.isEmpty())
@@ -46,6 +45,8 @@ public class EventHandlerWrapper {
 			logger.severe("Failed to create handler instance. Reason: " + e.getMessage());
 			logger.severe(e.toString());
 		}
+		
+		logger.info("Initialized event handler with " + eventMethodMap.size() + " handling methods.");
 	}
 		
 	public Class<?> getWrappedClass() {
