@@ -10,6 +10,9 @@ public abstract class Renderer {
 	protected RenderContext renderContext;
 	
 	protected Renderer(GraphicsAPI implementedWith, Renderable client) {
+		if (client == null)
+			throw new IllegalArgumentException("The renderable object may not be null.");
+		
 		renderContext = null;
 		this.renderClient = client;
 		this.implAPI = implementedWith;
@@ -21,6 +24,8 @@ public abstract class Renderer {
 	
 	/**
 	 * Called when the renderer is being removed from a canvas.
+	 * In this function, all loaded assets should be dumped. You
+	 * should assume the context is about to be destroyed.
 	 */
 	public abstract void invalidateContext();
 	

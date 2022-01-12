@@ -7,7 +7,7 @@ import org.loudonlune.arches.event.KeyPressEvent;
 import org.loudonlune.arches.event.KeyReleaseEvent;
 
 @EventHandler
-public class TestKeyEventHandler {
+public class TestEventHandler {
 	public void onKeyPressEvent(KeyPressEvent kpe) {
 		Logger.getGlobal().info("A key was pressed. Key codepoint: " + kpe.getKey());
 	}
@@ -15,4 +15,5 @@ public class TestKeyEventHandler {
 	public void onKeyReleaseEvent(KeyReleaseEvent kre) {
 		Logger.getGlobal().info("A key was released. Key codepoint: " + kre.getKey());
 	}
+	
 }

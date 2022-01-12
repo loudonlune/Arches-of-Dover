@@ -3,8 +3,10 @@ package org.loudonlune.arches;
 import java.util.Properties;
 import java.util.logging.Logger;
 
+import org.loudonlune.arches.event.Event;
 import org.loudonlune.arches.event.EventBus;
 import org.loudonlune.arches.event.GameCloseEvent;
+import org.loudonlune.arches.event.GameInitializationEvent;
 import org.loudonlune.arches.rendering.AcceleratedCanvas;
 import org.loudonlune.arches.rendering.GraphicsAPI;
 import org.loudonlune.arches.rendering.Renderer;
@@ -19,20 +21,6 @@ public final class ArchesOfDover implements Runnable {
 	public static Logger logger;
 	public static String version;
 	
-	private EventBus eventBus;
-	private AcceleratedCanvas canvas;
-	private Renderer currentRenderer;
-	private boolean exit;
-	
-	private final double updateRate = 20.0;
-	
-	public ArchesOfDover() {
-		eventBus = new EventBus();
-		canvas = new AcceleratedCanvas(1366, 768, "Arches of Dover");
-		currentRenderer = GraphicsAPI.GL_LATEST.createRendererForAPI();
-		exit = false;
-	}
-	
 	/**
 	 * @return The singleton instance of the engine.
 	 */
@@ -46,6 +34,13 @@ public final class ArchesOfDover implements Runnable {
 	private static void initializeLibraries() {
 		if (!GLFW.glfwInit())
 			throw new RuntimeException("Failed to load GLFW");
+		
+		GraphicsAPI.scan();
+		
+		logger.info("API availability on this system: ");
+		for (GraphicsAPI api : GraphicsAPI.values()) {
+			logger.info("\t" + api.toString() + ": " + api.isAvailable());
+		}
 	}
 	
 	/**
@@ -70,6 +65,8 @@ public final class ArchesOfDover implements Runnable {
 		// read required properties into main class from project.properties
 		populateProperties();
 		
+		System.setProperty("java.util.logging.SimpleFormatter.format", "[%1$tF %1$tT] [%4$s] [%3$s] %5$s %n");
+		
 		// initialize logger
 		logger = Logger.getGlobal();
 		logger.info("Arches of Dover version " + version + " starting...");
@@ -83,9 +80,35 @@ public final class ArchesOfDover implements Runnable {
 		instance.run();
 		logger.info("Shutting down.");
 	}
+	
+	private EngineState state;
+	private EventBus eventBus;
+	private AcceleratedCanvas canvas;
+	private Renderer currentRenderer;
+	private boolean exit;
+	
+	private final double updateRate = 20.0;
+	
+	public ArchesOfDover() {
+		state = EngineState.CONSTRUCTION;
+		eventBus = new EventBus();
+		canvas = new AcceleratedCanvas(1366, 768, "Arches of Dover");
+		currentRenderer = GraphicsAPI.GL_LATEST.createRendererForAPI();
+		exit = false;
+	}
 
 	public EventBus getEventBus() {
 		return eventBus;
+	}
+	
+	/**
+	 * Depending on engine state, either queues event for firing for fires immediately.
+	 * @param e Event to fire.
+	 */
+	public void fireEvent(Event e) {
+		if (state == EngineState.RUNTIME)
+			eventBus.queueEvent(e);
+		eventBus.forceFireEvent(e);
 	}
 
 	public AcceleratedCanvas getCanvas() {
@@ -97,13 +120,15 @@ public final class ArchesOfDover implements Runnable {
 	}
 	
 	public void initialize() {
-		
+		state = EngineState.INITIALIZATION;
+		eventBus.queueEvent(new GameInitializationEvent());
 	}
 	
 	/*
 	 * Once engine is bootstrapped, this is called by the thread tasked with updating.
 	 */
 	public void run() {
+		state = EngineState.RUNTIME;
 		double init = System.currentTimeMillis();
 		double now = System.currentTimeMillis();
 		double target = 1000.0 / updateRate;
@@ -113,8 +138,9 @@ public final class ArchesOfDover implements Runnable {
 		while (!exit) {
 			GLFW.glfwPollEvents();
 			exit = canvas.shouldClose();
+			
 			if (exit) {
-				eventBus.queueEvent(new GameCloseEvent());
+				fireEvent(new GameCloseEvent());
 			}
 			
 			double delta = now - init;

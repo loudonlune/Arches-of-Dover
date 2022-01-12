@@ -6,9 +6,11 @@ import org.loudonlune.arches.math.Mat2;
 
 public abstract class RenderContext {
 	private Stack<Mat2> matrixStack;
+	private Renderer renderer;
 	
-	public RenderContext() {
+	public RenderContext(Renderer parent) {
 		matrixStack = new Stack<>();
+		renderer = parent;
 	}
 	
 	public int getMatrixStackSize() {
@@ -30,5 +32,9 @@ public abstract class RenderContext {
 			mat.mul(m);
 		
 		return mat;
+	}
+	
+	public Renderer getRenderer() {
+		return renderer;
 	}
 }

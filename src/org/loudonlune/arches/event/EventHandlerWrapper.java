@@ -15,7 +15,21 @@ public class EventHandlerWrapper {
 	private Logger logger;
 	private Object eventHandlerInstance;
 	
-	public EventHandlerWrapper(EventBus parent, Class<?> wrappedClass) {
+	static EventHandlerWrapper wrapClass(EventBus parent, Class<?> wrappedClass) {
+		Optional<Constructor<?>> defaultCtor = Arrays.asList(wrappedClass.getConstructors())
+				.stream()
+				.filter(ctor -> ctor.getParameterCount() == 0)
+				.findFirst();
+		
+		if (defaultCtor.isEmpty())
+			return null;
+		
+		Constructor<?> unwrappedCtor = defaultCtor.get();
+		
+		return new EventHandlerWrapper(parent, wrappedClass, unwrappedCtor);
+	}
+	
+	private EventHandlerWrapper(EventBus parent, Class<?> wrappedClass, Constructor<?> defaultConstructor) {
 		this.wrappedClass = wrappedClass;
 		eventMethodMap = new HashMap<>();
 		logger = parent.getLogger();
@@ -30,23 +44,12 @@ public class EventHandlerWrapper {
 			}
 		}
 		
-		Optional<Constructor<?>> defaultCtor = Arrays.asList(wrappedClass.getConstructors())
-				.stream()
-				.filter(ctor -> ctor.getParameterCount() == 0)
-				.findFirst();
-		
-		if (defaultCtor.isEmpty())
-			throw new IllegalStateException("An event handler with no default constructor was loaded. This is not allowed.");
-		
-		Constructor<?> unwrappedCtor = defaultCtor.get();
 		try {
-			eventHandlerInstance = unwrappedCtor.newInstance();
+			eventHandlerInstance = defaultConstructor.newInstance();
 		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
 			logger.severe("Failed to create handler instance. Reason: " + e.getMessage());
 			logger.severe(e.toString());
 		}
-		
-		logger.info("Initialized event handler with " + eventMethodMap.size() + " handling methods.");
 	}
 		
 	public Class<?> getWrappedClass() {

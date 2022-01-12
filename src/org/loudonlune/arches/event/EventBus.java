@@ -66,9 +66,13 @@ public final class EventBus {
 				).toList());
 		
 		for (Class<?> c : listenerClasses)
-			handlers.add(new EventHandlerWrapper(this, c));
+			handlers.add(EventHandlerWrapper.wrapClass(this, c));
 		
 		return listenerClasses.size() + eventClasses.size();
+	}
+	
+	public int searchForEventClasses(String packageToSearch) {
+		return searchForEventClasses(new ConfigurationBuilder().forPackage(packageToSearch));
 	}
 	
 	/**
@@ -111,6 +115,22 @@ public final class EventBus {
 		eventBusLogger.info("Loaded " + searchForEventClasses(searchConfig) + " components.");
 	}
 	
+	private void fireEvent(Event e) {
+		for (EventHandlerWrapper eh : handlers)
+			eh.handle(e.getClass(), e);
+		
+		if (!e.isCancelled())
+			e.fire();
+	}
+	
+	/**
+	 * Should only be called by the engine during loading when queued events are not being routinely run.
+	 * @param e
+	 */
+	public void forceFireEvent(Event e) {
+		fireEvent(e);
+	}
+	
 	public void fireEvents() {
 		while (!eventQueue.isEmpty()) {
 			Event e = eventQueue.remove();
@@ -118,8 +138,7 @@ public final class EventBus {
 			if (e.isCancelled())
 				continue;
 			
-			for (EventHandlerWrapper eh : handlers)
-				eh.handle(e.getClass(), e);
+			fireEvent(e);
 		}
 	}
 	

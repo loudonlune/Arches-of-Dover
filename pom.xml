@@ -185,6 +185,53 @@
           <release>17</release>
         </configuration>
       </plugin>
+		<plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-jar-plugin</artifactId>
+            <configuration>
+                <archive>
+                    <manifest>
+                        <addClasspath>true</addClasspath>
+                        <mainClass>org.loudonlune.arches.ArchesOfDover</mainClass>
+                    </manifest>
+                </archive>
+            </configuration>
+        </plugin>
+		<plugin>
+            <artifactId>maven-dependency-plugin</artifactId>
+            <executions>
+              <execution>
+                <phase>package</phase>
+                <goals>
+                  <goal>copy-dependencies</goal>
+                </goals>
+                <configuration>
+                  <outputDirectory>${project.build.directory}</outputDirectory>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+                <forkMode>once</forkMode>
+                <argLine>-Djava.library.path=${project.build.directory}/natives/windows:${project.build.directory}/libs/natives/linux:${project.build.directory}/libs/natives/macosx:${project.build.directory}/libs/natives/solaris</argLine>
+            </configuration>
+        </plugin>
+            <plugin>
+                <groupId>com.googlecode.mavennatives</groupId>
+                <artifactId>maven-nativedependencies-plugin</artifactId>
+                <version>0.0.7</version>
+                <executions>
+                    <execution>
+                        <id>unpacknatives</id>
+                        <goals>
+                            <goal>copy</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
     </plugins>
   </build>
 </project>
